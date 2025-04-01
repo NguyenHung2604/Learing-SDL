@@ -429,21 +429,35 @@ void fireBullet()
 {
     if (!player) return;
 
-    Entity *bullet = new Entity;
-    memset(bullet, 0, sizeof(Entity)); // Khởi tạo viên đạn mới
+    // Tạo viên đạn bên trái
+    Entity *bulletLeft = new Entity;
+    memset(bulletLeft, 0, sizeof(Entity)); // Khởi tạo viên đạn mới
+    bulletLeft->side = SIDE_PLAYER;
+    bulletLeft->x = player->x;
+    bulletLeft->y = player->y + (player->h / 2) - 13; // Đặt lệch lên trên một chút
+    bulletLeft->dx = PLAYER_BULLET_SPEED;
+    bulletLeft->health = 1;
+    bulletLeft->texture = bulletTexture;
+    SDL_QueryTexture(bulletLeft->texture, NULL, NULL, &bulletLeft->w, &bulletLeft->h);
 
-    bullet->side = SIDE_PLAYER;
-    bullet->x = player->x;
-    bullet->y = player->y + (player->h / 2) - (bullet->h / 2);
-    bullet->dx = PLAYER_BULLET_SPEED;
-    bullet->health = 1;
-    bullet->texture = bulletTexture;
-    SDL_QueryTexture(bullet->texture, NULL, NULL, &bullet->w, &bullet->h);
+    stage.bullettail->next = bulletLeft;
+    stage.bullettail = bulletLeft;
 
-    stage.bullettail->next = bullet;
-    stage.bullettail = bullet;
+    // Tạo viên đạn bên phải
+    Entity *bulletRight = new Entity;
+    memset(bulletRight, 0, sizeof(Entity)); // Khởi tạo viên đạn mới
+    bulletRight->side = SIDE_PLAYER;
+    bulletRight->x = player->x;
+    bulletRight->y = player->y + (player->h / 2) + 13; // Đặt lệch xuống dưới một chút
+    bulletRight->dx = PLAYER_BULLET_SPEED;
+    bulletRight->health = 1;
+    bulletRight->texture = bulletTexture;
+    SDL_QueryTexture(bulletRight->texture, NULL, NULL, &bulletRight->w, &bulletRight->h);
 
-    SDL_Log("Fired bullet at (%f, %f)", bullet->x, bullet->y);
+    stage.bullettail->next = bulletRight;
+    stage.bullettail = bulletRight;
+
+    SDL_Log("Fired bullets at (%f, %f) and (%f, %f)", bulletLeft->x, bulletLeft->y, bulletRight->x, bulletRight->y);
 }
 
 int bulletHitFighter(Entity *b)
@@ -631,7 +645,7 @@ void drawBullet()
     Entity *b;
     for (b = stage.bullethead.next; b != nullptr; b = b->next)
     {
-        blit(b->texture, b->x, b->y);
+        blit(b->texture, b->x , b->y - b->h/2);
     }
 }
 
