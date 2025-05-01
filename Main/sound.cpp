@@ -12,6 +12,7 @@ void loadMusic(const char *filename) // Thay đổi từ char* thành const char
     {
         SDL_Log("Failed to load music: %s", Mix_GetError());
     }
+    Mix_VolumeMusic(128);
     
 }
 

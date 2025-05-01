@@ -214,7 +214,7 @@ void addDebris(Entity *e)
             d->y = e->y + e->h/2;
             d->dx = (rand() % 5) - (rand() % 5);
             d->dy = -(5 + (rand() % 12));
-            d->life = FPS*2;
+            d->life = FPS/2;
             d->texture = e->texture;
 
 
@@ -417,7 +417,7 @@ void initStage()
     bulletTexture = loadTexture("Graphic/dan1.png");
     enemyTexture = loadTexture("Graphic/enemynew.png");
     enemybulletTexture = loadTexture("Graphic/dan2.png");
-    background = loadTexture("Graphic/map1.jpg");
+    background = loadTexture("Graphic/map5.jpg");
     explosionTexture = loadTexture("Graphic/explosion.png");
     
 
