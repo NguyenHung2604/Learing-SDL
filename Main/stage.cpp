@@ -553,15 +553,15 @@ void draw()
 
 void drawHud()
 {
-    drawText(10, 30, 255, 255, 255, "SCORE: %03d", stage.score);
+    drawText(10, 15, 255, 255, 255, "SCORE: %05d", stage.score);
 
     if (stage.score > 0 && stage.score == highscore)
     {
-        drawText(960, 30, 0, 255, 0, "HIGH SCORE: %03d", highscore);
+        drawText(1000, 15, 0, 255, 0, "HIGH SCORE: %05d", highscore);
     }
     else
     {
-        drawText(960, 30, 255, 255, 255, "HIGH SCORE: %03d", highscore);
+        drawText(1000, 15, 255, 255, 255, "HIGH SCORE: %05d", highscore);
     }
 }
 void drawBackground()
