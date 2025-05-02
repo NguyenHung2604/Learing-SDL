@@ -56,6 +56,7 @@ struct Stage{
     Entity bullethead, *bullettail;
     Explosion explosionhead, *explosiontail;
     Debris debrishead, *debristail;
+    int score;
 };
 
 struct Star{

@@ -1,2 +1,2 @@
 all:
-	g++	-I src/include -L src/lib -I Header -o game Main/main.cpp Main/init.cpp Main/draw.cpp Main/input.cpp Main/stage.cpp Main/util.cpp Main/sound.cpp -lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf -lSDL2_mixer
+	g++	-I src/include -L src/lib -I Header -o game Main/main.cpp Main/init.cpp Main/draw.cpp Main/input.cpp Main/stage.cpp Main/util.cpp Main/sound.cpp Main/text.cpp -lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf -lSDL2_mixer

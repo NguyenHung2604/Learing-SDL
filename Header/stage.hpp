@@ -22,7 +22,7 @@ void spawnEnemy();
 
 // Điều khiển và bắn đạn
 void fireBullet();
-void enemyFireBullet();
+void enemyFireBullet(Entity *e);
 
 // Vẽ game
 void draw();
@@ -35,7 +35,7 @@ void drawDebris();
 void drawExplosions();
 void drawFighter();
 void drawBullet();
-
+void drawHud();
 // Hỗ trợ
 void clipPlayer();
 void capFrameRate(long *then, float *remainder);

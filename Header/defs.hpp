@@ -1,4 +1,3 @@
-
 #ifndef _DEFS_HPP
 #define _DEFS_HPP
 
@@ -18,7 +17,10 @@ const int MAX_STARS = 500;
 const int EXPLOSION_WIDTH = 500;
 const int EXPLOSION_HEIGHT = 500;
 const int MAX_SND_CHANNELS = 8;
-
+const int MAX_LINE_LENGTH = 1024;
+const int GLYPH_WIDTH = 16;
+const int GLYPH_HEIGHT = 16;
+const int GLYPHS_PER_ROW = 20;
 enum  
 {
     CH_ANY = -1,

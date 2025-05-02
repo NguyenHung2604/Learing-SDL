@@ -3,18 +3,18 @@
 #include <cmath>
 #include <algorithm>
 #include "util.hpp"
-
+   
 
 int enemyremainingTime;
 int stageResetTimer;
 int backgroundX;
+int highscore = 0;
 Star stars[MAX_STARS];
 
 void doPlayer()
 {
     if (player != nullptr)
     {
-        SDL_Log("Player is at (%f, %f)", player->x, player->y);
 
         player->dx = player->dy = 0;
 
@@ -25,28 +25,27 @@ void doPlayer()
 
         if (app.keyboard[SDL_SCANCODE_UP])
         {
-            SDL_Log("Moving up");
             player->dy = -PLAYER_SPEED;
         }
         if (app.keyboard[SDL_SCANCODE_DOWN])
         {
-            SDL_Log("Moving down");
+            
             player->dy = PLAYER_SPEED;
         }
         if (app.keyboard[SDL_SCANCODE_LEFT])
         {
-            SDL_Log("Moving left");
+            
             player->dx = -PLAYER_SPEED;
         }
         if (app.keyboard[SDL_SCANCODE_RIGHT])
         {
-            SDL_Log("Moving right");
+            
             player->dx = PLAYER_SPEED;
         }
 
         if (app.keyboard[SDL_SCANCODE_LCTRL] && player->reload == 0)
         {
-            SDL_Log("Firing bullet");
+            
             fireBullet();
             playsound(SND_PLAYER_FIRE, CH_PLAYER);
             player->reload = RELOAD_SPEED; // Đặt lại thời gian nạp đạn
@@ -72,7 +71,7 @@ void doFighter()
 
         if (e == player && e->health == 0)
         {
-            SDL_Log("Player is dead");
+            
             addExplosion(e->x, e->y, 2);
             addDebris(e);
             player = nullptr;
@@ -84,7 +83,7 @@ void doFighter()
                 stage.fightertail = pre;
             }
             pre->next = e->next;
-            SDL_Log("Deleting fighter at (%f, %f)", e->x, e->y);
+            
             addDebris(e);
             delete e;
             e = pre;
@@ -284,13 +283,13 @@ void spawnEnemy()
         stage.fightertail->next = enemy;
         stage.fightertail = enemy;
 
-        SDL_Log("Spawned enemy at (%f, %f)", enemy->x, enemy->y);
+        
     }
 }
 
 void logic()
 {
-    SDL_Log("logic() is running");
+    
     doBackground();
     doStarfield();
 
@@ -342,11 +341,11 @@ void resetStage()
     Explosion *ex;
     Debris *d;
 
+    stage.score = 0;
     while (stage.fighterhead.next)
     {
         e = stage.fighterhead.next;
         stage.fighterhead.next = e->next;
-        SDL_Log("Deleting fighter at (%f, %f)", e->x, e->y);
         delete e;
     }
 
@@ -354,7 +353,6 @@ void resetStage()
     {
         e = stage.bullethead.next;
         stage.bullethead.next = e->next;
-        SDL_Log("Deleting bullet at (%f, %f)", e->x, e->y);
         delete e;
     }
     
@@ -378,7 +376,6 @@ void resetStage()
     stage.bullettail = &stage.bullethead;
     stage.explosiontail = &stage.explosionhead;
     stage.debristail = &stage.debrishead;
-    SDL_Log("Initializing player...");
     initPlayer();
     if (!player)
     {
@@ -389,6 +386,7 @@ void resetStage()
 
     enemyremainingTime = 0;
     stageResetTimer = 3 * FPS;
+    
 }
 
 void initStarField()
@@ -417,7 +415,7 @@ void initStage()
     bulletTexture = loadTexture("Graphic/dan1.png");
     enemyTexture = loadTexture("Graphic/enemynew.png");
     enemybulletTexture = loadTexture("Graphic/dan2.png");
-    background = loadTexture("Graphic/map5.jpg");
+    background = loadTexture("Graphic/map1.jpg");
     explosionTexture = loadTexture("Graphic/explosion.png");
     
 
@@ -430,34 +428,19 @@ void fireBullet()
     if (!player) return;
 
     // Tạo viên đạn bên trái
-    Entity *bulletLeft = new Entity;
-    memset(bulletLeft, 0, sizeof(Entity)); // Khởi tạo viên đạn mới
-    bulletLeft->side = SIDE_PLAYER;
-    bulletLeft->x = player->x;
-    bulletLeft->y = player->y + (player->h / 2) - 13; // Đặt lệch lên trên một chút
-    bulletLeft->dx = PLAYER_BULLET_SPEED;
-    bulletLeft->health = 1;
-    bulletLeft->texture = bulletTexture;
-    SDL_QueryTexture(bulletLeft->texture, NULL, NULL, &bulletLeft->w, &bulletLeft->h);
+    Entity *bullet = new Entity;
+    memset(bullet, 0, sizeof(Entity)); // Khởi tạo viên đạn mới
+    bullet->side = SIDE_PLAYER;
+    bullet->x = player->x;
+    bullet->y = player->y + (player->h / 2); // Đặt ở giữa
+    bullet->dx = PLAYER_BULLET_SPEED;
+    bullet->health = 1;
+    bullet->texture = bulletTexture;
+    SDL_QueryTexture(bullet->texture, NULL, NULL, &bullet->w, &bullet->h);
 
-    stage.bullettail->next = bulletLeft;
-    stage.bullettail = bulletLeft;
+    stage.bullettail->next = bullet;
+    stage.bullettail = bullet;
 
-    // Tạo viên đạn bên phải
-    Entity *bulletRight = new Entity;
-    memset(bulletRight, 0, sizeof(Entity)); // Khởi tạo viên đạn mới
-    bulletRight->side = SIDE_PLAYER;
-    bulletRight->x = player->x;
-    bulletRight->y = player->y + (player->h / 2) + 13; // Đặt lệch xuống dưới một chút
-    bulletRight->dx = PLAYER_BULLET_SPEED;
-    bulletRight->health = 1;
-    bulletRight->texture = bulletTexture;
-    SDL_QueryTexture(bulletRight->texture, NULL, NULL, &bulletRight->w, &bulletRight->h);
-
-    stage.bullettail->next = bulletRight;
-    stage.bullettail = bulletRight;
-
-    SDL_Log("Fired bullets at (%f, %f) and (%f, %f)", bulletLeft->x, bulletLeft->y, bulletRight->x, bulletRight->y);
 }
 
 int bulletHitFighter(Entity *b)
@@ -470,7 +453,6 @@ int bulletHitFighter(Entity *b)
         {
             b->health = 0;
             e->health--;
-            SDL_Log("Bullet hit fighter at (%f, %f)", e->x, e->y);
             if(e->health == 0)
             {
                 addExplosion(e->x +(e->w/2), e->y + (e->h)/2, 10);
@@ -480,6 +462,9 @@ int bulletHitFighter(Entity *b)
                 }
                 else{
                     playsound(SND_ALIEN_DIE, CH_ANY);
+                    stage.score ++;
+                    highscore = std::max(highscore, stage.score);
+                    
                 }
             }
             addDebris(e);
@@ -512,8 +497,6 @@ void enemyFireBullet(Entity *e) // bắn một viên đạn từ enemy
     bullet->dy *= ENEMY_BULLET_SPEED;
 
     e->reload = (rand() % (FPS * 2));
-
-    SDL_Log("Enemy fired bullet at (%f, %f)", bullet->x, bullet->y);
 }
 
 void doEnemies()
@@ -546,7 +529,6 @@ void doBullet()
                 stage.bullettail = pre; // Cập nhật bullettail để trỏ đến viên đạn trước đó
             }
             pre->next = b->next; // Bỏ qua viên đạn hiện tại trong danh sách liên kết
-            SDL_Log("Deleting bullet at (%f, %f)", b->x, b->y);
             delete b; // Giải phóng bộ nhớ của viên đạn hiện tại
             b = pre; // Đặt b trỏ lại về viên đạn trước đó để tiếp tục vòng lặp
         }
@@ -560,6 +542,7 @@ void doBullet()
 void draw()
 {   drawBackground();
     drawStarfield();
+    drawHud();
 
     drawFighter();
     drawBullet();
@@ -568,6 +551,19 @@ void draw()
     drawExplosions();
 }
 
+void drawHud()
+{
+    drawText(10, 30, 255, 255, 255, "SCORE: %03d", stage.score);
+
+    if (stage.score > 0 && stage.score == highscore)
+    {
+        drawText(960, 30, 0, 255, 0, "HIGH SCORE: %03d", highscore);
+    }
+    else
+    {
+        drawText(960, 30, 255, 255, 255, "HIGH SCORE: %03d", highscore);
+    }
+}
 void drawBackground()
 {
     SDL_Rect dest;
