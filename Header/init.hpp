@@ -4,4 +4,5 @@
 
 void InitSDL();
 void cleanup();
+void initGame();
 #endif

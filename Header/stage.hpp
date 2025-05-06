@@ -36,6 +36,8 @@ void drawExplosions();
 void drawFighter();
 void drawBullet();
 void drawHud();
+void drawHP();
+void drawLogo();
 // Hỗ trợ
 void clipPlayer();
 void capFrameRate(long *then, float *remainder);

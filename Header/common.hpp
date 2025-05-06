@@ -17,6 +17,9 @@
 #include <time.h>
 #include "sound.hpp"
 #include "text.hpp"
+#include "highscore.hpp"
+#include "Texture.hpp"
+#include "title.hpp"
 extern App app;
 extern Entity *player;
 extern Stage stage;
@@ -27,6 +30,8 @@ extern SDL_Texture *playerTexture;
 extern SDL_Texture *background;
 extern SDL_Texture *explosionTexture;
 extern SDL_Texture *fontTexture;
+extern SDL_Texture *UET;
+extern SDL_Texture *Escape;
 void InitSDL();
 void cleanup();
 #endif

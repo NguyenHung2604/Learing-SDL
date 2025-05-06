@@ -8,16 +8,7 @@ void prepareScene()
     SDL_RenderClear(app.renderer);
 }
 
-SDL_Texture *loadTexture(const char *filename)
-{
-    SDL_Texture *texture;
 
-    SDL_LogMessage(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO, "Loading %s", filename);
-    
-    texture = IMG_LoadTexture(app.renderer, filename);
-
-    return texture;
-}
 
 void blit(SDL_Texture *texture, int x, int y)
 {
@@ -40,7 +31,10 @@ void blitRect(SDL_Texture *texture, SDL_Rect *src, int x, int y)
     SDL_RenderCopy(app.renderer, texture, src, &des);
 }
 
+
 void presentScene()
 {
     SDL_RenderPresent(app.renderer);
 }
+
+

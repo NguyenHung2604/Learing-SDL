@@ -46,6 +46,19 @@
     }
 
 
+    void initGame()
+    {
+
+        initStarField();
+
+        initSounds();
+
+        initFont();
+
+        initTablescore();
+
+    }
+
 
     void cleanup()
     {

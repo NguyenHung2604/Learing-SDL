@@ -3,13 +3,16 @@
 #include <cmath>
 #include <algorithm>
 #include "util.hpp"
-   
 
 int enemyremainingTime;
 int stageResetTimer;
 int backgroundX;
 int highscore = 0;
+int timeout = 300; // thoi gian xuat hien cai title
+int reveal = 0; // thoi gian chay de xuat hien cai title
+TextureManager *texManager = nullptr;
 Star stars[MAX_STARS];
+
 
 void doPlayer()
 {
@@ -69,14 +72,27 @@ void doFighter()
         e->x += e->dx;
         e->y += e->dy;
 
-        if (e == player && e->health == 0)
+        if (e == player && e->health <= 0)
         {
-            
             addExplosion(e->x, e->y, 2);
             addDebris(e);
+            
+            // Thay đổi trạng thái game
+            currentGameState = GAME_OVER;
+            // SDL_LOG(("Player died, switching to GAME_OVER state");
+            
+            // Vẫn xóa player khỏi danh sách và đặt player = nullptr
+            if (e == stage.fightertail)
+            {
+                stage.fightertail = pre;
+            }
+            pre->next = e->next;
+            delete e;
             player = nullptr;
+            e = pre;  // Cần thiết để không bị truy cập con trỏ đã giải phóng
+            continue;
         }
-        if (e != player && (e->x < -e->w || e->health == 0 || collision(e->x, e->y, e->w, e->h, player->x, player->y, player->w, player->h)))
+        else if (e != player && (e->x < -e->w || e->health == 0 || (player != nullptr && collision(e->x, e->y, e->w, e->h, player->x, player->y, player->w, player->h))))
         {
             if (e == stage.fightertail)
             {
@@ -258,7 +274,7 @@ void spawnEnemy()
         Entity *enemy = new Entity();
         if (!enemy)
         {
-            SDL_Log("Failed to allocate memory for enemy!");
+            // SDL_LOG(("Failed to allocate memory for enemy!");
             return;
         }
         memset(enemy, 0, sizeof(Entity));
@@ -266,46 +282,121 @@ void spawnEnemy()
         enemy->side = SIDE_ENEMY;
         enemy->health = ENEMY_HEALTH;
         enemy->x = SCREEN_WIDTH;
-        enemy->y = rand() % (SCREEN_HEIGHT - enemy->h);
         enemy->texture = enemyTexture;
-
+        
+        // Kiểm tra texture
         if (!enemy->texture)
         {
-            SDL_Log("Failed to load enemy texture!");
+            // SDL_LOG(("Enemy texture is NULL! Cannot spawn enemy.");
             delete enemy;
             return;
         }
 
+        // Lấy kích thước trước khi tính y
         SDL_QueryTexture(enemy->texture, NULL, NULL, &enemy->w, &enemy->h);
+        
+        // Giờ mới tính y
+        enemy->y = rand() % (SCREEN_HEIGHT - enemy->h);
+        
+        // Thiết lập các giá trị khác
         enemy->dx = -(2 + (rand() % 4));
+        enemy->reload = FPS/(1 + (rand() % 3)); // Thêm reload time
+        
+        // Cập nhật remaining time
         enemyremainingTime = 30 + (rand() % 60);
 
+        // Thêm vào danh sách
         stage.fightertail->next = enemy;
         stage.fightertail = enemy;
-
         
+        // SDL_LOG(("Enemy spawned at (%f, %f) with health %d", enemy->x, enemy->y, enemy->health);
     }
 }
 
+
 void logic()
-{
-    
+{   
     doBackground();
     doStarfield();
 
-    doPlayer();
-    doFighter();
-    doBullet();
-    spawnEnemy();
-    doEnemies();
-    if (player == nullptr && --stageResetTimer <= 0)
-    {
-        SDL_Log("Resetting stage...");
-        resetStage();
+    // Debug để xem trạng thái game hiện tại
+    // SDL_LOG(("Current game state: %d", currentGameState);
+    
+    // Xử lý tất cả Enter key press ở một chỗ 
+    if (app.keyboard[SDL_SCANCODE_KP_ENTER] || app.keyboard[SDL_SCANCODE_RETURN])
+    {   
+        app.keyboard[SDL_SCANCODE_KP_ENTER] = 0;
+        app.keyboard[SDL_SCANCODE_RETURN] = 0;
+        
+        // Xử lý dựa trên trạng thái
+        if (currentGameState == BEGINNING)
+        {
+            // SDL_LOG(("Chuyển từ BEGINNING sang SCORE_SCREEN");
+            currentGameState = SCORE_SCREEN;
+            exitTitle();
+            return;
+        }
+        else if (currentGameState == SCORE_SCREEN)
+        {
+            // SDL_LOG(("Chuyển từ SCORE_SCREEN sang GAME_PLAYING");
+            currentGameState = GAME_PLAYING;
+            resetStage();
+            enemyremainingTime = 1;
+            return;
+        }
+        else if (currentGameState == GAME_OVER)
+        {
+            // SDL_LOG(("Chuyển từ GAME_OVER sang GAME_PLAYING");
+            currentGameState = GAME_PLAYING;
+            resetStage();
+            return;
+        }
     }
-
-    doExplosion();
-    doDebris();
+    
+    // Xử lý theo trạng thái game
+    if (currentGameState == BEGINNING)
+    {
+        if (reveal < SCREEN_HEIGHT)
+        {
+            reveal++;
+        }
+        
+        if (--timeout <= 0)
+        {
+            initTitle();
+        }
+    }
+    else if (currentGameState == SCORE_SCREEN)
+    {
+        // Xử lý cho SCORE_SCREEN
+        return;
+    }
+    else if (currentGameState == GAME_PLAYING)
+    {
+        // Logic game khi đang chơi
+        doFighter();
+        
+        if (player != nullptr)
+        {
+            doPlayer();
+        }
+        
+        spawnEnemy();
+        doEnemies();
+        doBullet();
+        doExplosion();
+        doDebris();
+    }
+    else if (currentGameState == GAME_OVER)
+    {
+        // Xử lý cho GAME_OVER
+        if (player == nullptr && --stageResetTimer <= 0)
+        {   
+            addHighscore(stage.score);
+            initHighscore();
+            initPlayer();
+        }
+    }
 }
 
 void clipPlayer()
@@ -336,12 +427,22 @@ void clipPlayer()
 
 void resetStage()
 {
-    SDL_Log("Resetting stage...");
+    // SDL_LOG(("Resetting stage...");
     Entity *e;
     Explosion *ex;
     Debris *d;
 
+    // Lưu lại các texture trước khi reset
+    SDL_Texture* playerTex = playerTexture;
+    SDL_Texture* bulletTex = bulletTexture;
+    SDL_Texture* enemyTex = enemyTexture;
+    SDL_Texture* enemyBulletTex = enemybulletTexture;
+    SDL_Texture* bg = background;
+    SDL_Texture* explosionTex = explosionTexture;
+
     stage.score = 0;
+    
+    // Giải phóng các đối tượng
     while (stage.fighterhead.next)
     {
         e = stage.fighterhead.next;
@@ -363,7 +464,6 @@ void resetStage()
         delete ex;
     }
     
-
     while(stage.debrishead.next)
     {
         d = stage.debrishead.next;
@@ -371,23 +471,37 @@ void resetStage()
         delete d;
     }
 
+    // Reset cấu trúc stage
     memset(&stage, 0, sizeof(Stage));
+    
+    // Khôi phục các texture
+    playerTexture = playerTex;
+    bulletTexture = bulletTex;
+    enemyTexture = enemyTex;
+    enemybulletTexture = enemyBulletTex;
+    background = bg;
+    explosionTexture = explosionTex;
+
+    // Khởi tạo lại các đầu danh sách
     stage.fightertail = &stage.fighterhead;
     stage.bullettail = &stage.bullethead;
     stage.explosiontail = &stage.explosionhead;
     stage.debristail = &stage.debrishead;
+    
+    // Khởi tạo lại người chơi và các thành phần khác
     initPlayer();
     if (!player)
     {
-        SDL_Log("Player failed to initialize!");
+        //SDL_LOG(("Player failed to initialize!");
         exit(1);
     }
     initStarField();
 
     enemyremainingTime = 0;
     stageResetTimer = 3 * FPS;
-    
 }
+
+
 
 void initStarField()
 {
@@ -411,12 +525,15 @@ void initStage()
     stage.debristail = &stage.debrishead;
 
     // Khởi tạo các texture trước khi gọi initPlayer
-    playerTexture = loadTexture("Graphic/ship2new.png");
-    bulletTexture = loadTexture("Graphic/dan1.png");
-    enemyTexture = loadTexture("Graphic/enemynew.png");
-    enemybulletTexture = loadTexture("Graphic/dan2.png");
-    background = loadTexture("Graphic/map1.jpg");
-    explosionTexture = loadTexture("Graphic/explosion.png");
+    if (!texManager) {
+        texManager = new TextureManager(app.renderer);
+    }
+    playerTexture = texManager->loadTexture("Graphic/ship2new.png");
+    bulletTexture = texManager->loadTexture("Graphic/dan1.png");
+    enemyTexture = texManager->loadTexture("Graphic/enemynew.png");
+    enemybulletTexture = texManager->loadTexture("Graphic/dan2.png");
+    background = texManager->loadTexture("Graphic/map1.jpg");
+    explosionTexture = texManager->loadTexture("Graphic/explosion.png");
     
 
     // Đặt lại stage
@@ -464,6 +581,10 @@ int bulletHitFighter(Entity *b)
                     playsound(SND_ALIEN_DIE, CH_ANY);
                     stage.score ++;
                     highscore = std::max(highscore, stage.score);
+                    if(stage.score % 10 == 0 && stage.score != 0)
+                    {
+                        player->health = std::min(PLAYER_HEALTH, player->health + 3);
+                    }
                     
                 }
             }
@@ -475,7 +596,8 @@ int bulletHitFighter(Entity *b)
 }
 
 void enemyFireBullet(Entity *e) // bắn một viên đạn từ enemy
-{
+{   
+    if(player == nullptr) return;
     Entity *bullet = new Entity;
     memset(bullet, 0, sizeof(Entity));
     // thêm viên đạn vào cuối linked list
@@ -496,7 +618,8 @@ void enemyFireBullet(Entity *e) // bắn một viên đạn từ enemy
     bullet->dx *= ENEMY_BULLET_SPEED;
     bullet->dy *= ENEMY_BULLET_SPEED;
 
-    e->reload = (rand() % (FPS * 2));
+    // Khi tạo enemy, đặt reload time
+    e->reload = FPS/(1 + (rand() % 3)); 
 }
 
 void doEnemies()
@@ -539,22 +662,66 @@ void doBullet()
     }
 }
 
+void drawLogo()
+{
+    SDL_Rect r;
+    r.x = 0;
+    r.y = 0;
+
+    SDL_QueryTexture(Escape, NULL, NULL, &r.w, &r.h);
+    r.h =  std::min(reveal, r.h);
+
+    blitRect(Escape, &r, (SCREEN_WIDTH/2) - 2*(r.h), 100);
+
+    SDL_QueryTexture(UET, NULL, NULL, &r.w, &r.h);
+
+    r.h = std::min(reveal, r.h);
+    blitRect(UET, &r, (SCREEN_WIDTH/2) - (r.h) - 10, 250);
+}
+
 void draw()
-{   drawBackground();
+{
+    drawBackground();
     drawStarfield();
-    drawHud();
+    drawLogo();
 
-    drawFighter();
-    drawBullet();
-
-    drawDebris();
-    drawExplosions();
+    if(currentGameState == BEGINNING){
+        if(timeout % 40 < 20)
+        {
+            drawText(470, 600, 255, 255, 255, "PRESS ENTER TO START");
+        }
+    }
+    else if (currentGameState == SCORE_SCREEN)
+    {
+        // Vẽ màn hình tiêu đề
+        // drawText(SCREEN_WIDTH / 2 - 150, SCREEN_HEIGHT / 2 - 30, 255, 255, 255, "GAME TITLE");
+        // drawText(SCREEN_WIDTH / 2 - 180, SCREEN_HEIGHT / 2 + 30, 255, 255, 255, "PRESS ENTER TO START");
+        drawHighscore();
+        drawText(450, 600, 255, 255, 255, "PRESS ENTER TO PLAY!");
+    }
+    else if (currentGameState == GAME_PLAYING)
+    {
+        // Vẽ màn hình gameplay
+        drawHP();
+        drawHud();
+        drawFighter();
+        drawBullet();
+        drawDebris();
+        drawExplosions();
+    }
+    else if (currentGameState == GAME_OVER)
+    {
+        // Vẽ màn hình game over
+        drawHighscore();
+        drawText(SCREEN_WIDTH/2 - 110, 600, 255, 255, 255, "GAME OVER");
+        drawText(425, 640, 255, 255, 255, "PRESS ENTER TO RESTART");
+        drawText(395, 680, 255, 255, 255, "CLICK THE X SYMBOL TO EXIT");
+    }
 }
 
 void drawHud()
 {
     drawText(10, 15, 255, 255, 255, "SCORE: %05d", stage.score);
-
     if (stage.score > 0 && stage.score == highscore)
     {
         drawText(1000, 15, 0, 255, 0, "HIGH SCORE: %05d", highscore);
@@ -562,6 +729,12 @@ void drawHud()
     else
     {
         drawText(1000, 15, 255, 255, 255, "HIGH SCORE: %05d", highscore);
+    }
+}
+void drawHP()
+{   if(player != nullptr){
+    drawText(10, 35, 255, 0, 0, "HP: %d", player->health);
+    drawText(10, 55, 255, 0, 125, "HEAL 3 HP FOR EACH 10 POINTS");
     }
 }
 void drawBackground()
@@ -650,7 +823,7 @@ void initPlayer()
     player = new Entity;
     if (!player)
     {
-        SDL_Log("Failed to allocate memory for player!");
+        //SDL_LOG((("Failed to allocate memory for player!");
         exit(1);
     }
     memset(player, 0, sizeof(Entity));
@@ -664,7 +837,7 @@ void initPlayer()
     player->texture = playerTexture;
     if (!player->texture)
     {
-        SDL_Log("Failed to load player texture!");
+        //dSDL_LOG((("Failed to load player texture!");
         exit(1);
     }
     SDL_QueryTexture(player->texture, NULL, NULL, &player->w, &player->h);

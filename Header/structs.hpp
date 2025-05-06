@@ -3,6 +3,7 @@
 #include <iostream>
 #include <SDL2/SDL.h>
 #include "defs.hpp"
+
 struct Delegate{
     void (*logic)();
     void (*draw)(); 
@@ -64,6 +65,17 @@ struct Star{
     int y;
     int speed;
 };
+
+struct Highscore{
+    int recent;
+    int score;
+};
+
+struct HIGHSCORES
+{
+    Highscore highscore[NUM_HIGHSCORES];  
+};
+
 
 
 

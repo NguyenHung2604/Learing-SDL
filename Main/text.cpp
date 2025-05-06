@@ -2,8 +2,8 @@
 char drawTextBuffer[MAX_LINE_LENGTH];
 
 void initFont()
-{
-    fontTexture = loadTexture("Graphic/16X16-F8.png");
+{   TextureManager texManager(app.renderer);  
+    fontTexture = texManager.loadTexture("Graphic/fontreal.png");
 }
 
 void drawText(int x, int y, int r, int g, int b, const char *format, ...)

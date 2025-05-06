@@ -14,6 +14,7 @@ SDL_Texture *enemybulletTexture;
 SDL_Texture *background;
 SDL_Texture *explosionTexture;
 SDL_Texture *fontTexture;
+GameState currentGameState = BEGINNING; // Thêm biến trạng thái game
 int main(int argc, char *argv[])
 {     
     long then;
@@ -25,13 +26,14 @@ int main(int argc, char *argv[])
 
     // Đăng ký hàm cleanup để gọi khi chương trình kết thúc
     atexit(cleanup);
-
-    // Khởi tạo stage
+    
+    initTitle();
+    // khoi tao diem cao
+    initHighscore();
+    // Khởi tạo stag
     initStage();
-    // khoi tao diem
-    initFont();
-    // Khởi tạo sound
-    initSounds();
+    // Khoi tao game
+    initGame();
     // Vòng lặp chính của trò chơi
     then = SDL_GetTicks();
     remain = 0;
@@ -49,6 +51,7 @@ int main(int argc, char *argv[])
 
         capFrameRate(&then, &remain);
     }
+
     cleanupSound();
 
     return 0;

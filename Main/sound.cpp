@@ -20,7 +20,7 @@ void initSounds()
 {
     memset(sounds, 0, sizeof(Mix_Chunk*) * SND_MAX);
     
-    loadMusic("Sounds Effect/main theme.mp3");
+    loadMusic("Sounds Effect/nanana.mp3");
 
     if (music != NULL) // Chỉ phát nhạc nếu tải thành công
     {
