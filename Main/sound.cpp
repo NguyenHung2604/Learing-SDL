@@ -2,6 +2,8 @@
 
 Mix_Chunk *sounds[MAX_SND_CHANNELS];
 Mix_Music *music;
+Mix_Music *bossMusic = NULL;
+bool isPlayingBossMusic = false;
 
 
 void loadMusic(const char *filename) // Thay đổi từ char* thành const char*
@@ -12,17 +14,31 @@ void loadMusic(const char *filename) // Thay đổi từ char* thành const char
     {
         SDL_Log("Failed to load music: %s", Mix_GetError());
     }
-    Mix_VolumeMusic(128);
+    Mix_VolumeMusic(MIX_MAX_VOLUME);
     
+}
+
+void loadBossMusic(const char *filename)
+{
+    bossMusic = Mix_LoadMUS(filename);
+    if (bossMusic == NULL)
+    {
+        SDL_Log("Failed to load boss music: %s", Mix_GetError());
+    }
+    Mix_VolumeMusic(50);
 }
 
 void initSounds()
 {
     memset(sounds, 0, sizeof(Mix_Chunk*) * SND_MAX);
     
-    loadMusic("Sounds Effect/nanana.mp3");
+    // Load main theme
+    loadMusic("Sounds Effect/main theme.mp3");
+    
+    // Load boss theme
+    loadBossMusic("Sounds Effect/ban phase.mp3");
 
-    if (music != NULL) // Chỉ phát nhạc nếu tải thành công
+    if (music != NULL) // Chỉ phát nhạc main theme khi bắt đầu
     {
         playmusic(-1);
     }
@@ -48,6 +64,43 @@ void loadSounds()
 
 }
 
+
+// Thêm vào file sound.cpp
+void switchMusic(bool toBossMusic)
+{
+    if (toBossMusic && !isPlayingBossMusic)
+    {
+        Mix_FadeOutMusic(500); // Fade out nhạc hiện tại trong 500ms
+        SDL_Delay(550); // Đợi nhạc fade out xong
+        
+        if (bossMusic != NULL)
+        {
+            Mix_PlayMusic(bossMusic, -1); // Lặp vô hạn
+            Mix_VolumeMusic(50);
+            isPlayingBossMusic = true;
+        }
+        else
+        {
+            SDL_Log("Boss music not loaded!");
+        }
+    }
+    else if (!toBossMusic && isPlayingBossMusic)
+    {
+        Mix_FadeOutMusic(500);
+        SDL_Delay(550);
+        
+        if (music != NULL)
+        {
+            Mix_PlayMusic(music, -1);
+            Mix_VolumeMusic(50);
+            isPlayingBossMusic = false;
+        }
+        else
+        {
+            SDL_Log("Main music not loaded!");
+        }
+    }
+}
 
 void playmusic(int loop)
 {
@@ -75,5 +128,11 @@ void cleanupSound()
         Mix_HaltMusic();
         Mix_FreeMusic(music);
         music = NULL;
+    }
+    
+    if(bossMusic != NULL)
+    {
+        Mix_FreeMusic(bossMusic);
+        bossMusic = NULL;
     }
 }

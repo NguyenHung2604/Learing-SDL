@@ -19,6 +19,7 @@ void addExplosion(int x, int y, int num);
 void addDebris(Entity *e);
 void doDebris();
 void spawnEnemy();
+void bulletHitBoss();
 
 // Điều khiển và bắn đạn
 void fireBullet();
@@ -38,6 +39,9 @@ void drawBullet();
 void drawHud();
 void drawHP();
 void drawLogo();
+void initBoss();
+void doBoss();
+void drawBoss();
 // Hỗ trợ
 void clipPlayer();
 void capFrameRate(long *then, float *remainder);

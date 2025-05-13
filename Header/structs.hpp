@@ -52,14 +52,6 @@ struct Entity{
     Entity *next;
 };  
 
-struct Stage{
-    Entity fighterhead, *fightertail;
-    Entity bullethead, *bullettail;
-    Explosion explosionhead, *explosiontail;
-    Debris debrishead, *debristail;
-    int score;
-};
-
 struct Star{
     int x;
     int y;
@@ -77,5 +69,44 @@ struct HIGHSCORES
 };
 
 
+// Boss
+
+typedef enum{
+    BOSS_PHASE_1,
+    BOSS_PHASE_2
+} BossPhase;
+
+typedef enum{
+    BOSS_ATTACK_NORMAL,
+    BOSS_ATTACK_SPREAD,
+    BOSS_ATTACK_LASER,
+    BOSS_ATTACK_SPRIAL
+} BossAttackType;
+
+typedef struct Boss{
+    Entity entity;
+    BossPhase CurrentPhase;
+    int phaseChangeHealth;
+    BossAttackType attacktype;
+    int attackcooldown; // hoi chieu
+    int attackPattern; // mau tan cong
+    int movementPattern; // cach thuc di chuyen
+    float specialAttacktimer; // bo dem cho tan cong dac biet cua boss
+    int invincibleFrames;
+    int lasertime;
+    int laserwarningtime;
+    int lasertargetY;
+   
+    SDL_Texture * texture;
+    struct Boss *next;
+} Boss;
 
 
+struct Stage{
+    Entity fighterhead, *fightertail;
+    Entity bullethead, *bullettail;
+    Explosion explosionhead, *explosiontail;
+    Debris debrishead, *debristail;
+    Boss bosshead, *bosstail;
+    int score;
+};

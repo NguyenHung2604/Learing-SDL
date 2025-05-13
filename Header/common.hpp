@@ -32,6 +32,8 @@ extern SDL_Texture *explosionTexture;
 extern SDL_Texture *fontTexture;
 extern SDL_Texture *UET;
 extern SDL_Texture *Escape;
+extern SDL_Texture *bossTexture;
+extern SDL_Texture *bossbullet; 
 void InitSDL();
 void cleanup();
 #endif

@@ -10,10 +10,12 @@ Stage stage;
 SDL_Texture *bulletTexture;
 SDL_Texture *enemyTexture;
 SDL_Texture *playerTexture;
+SDL_Texture *bossTexture;
 SDL_Texture *enemybulletTexture;
 SDL_Texture *background;
 SDL_Texture *explosionTexture;
 SDL_Texture *fontTexture;
+SDL_Texture *bossbullet;
 GameState currentGameState = BEGINNING; // Thêm biến trạng thái game
 int main(int argc, char *argv[])
 {     

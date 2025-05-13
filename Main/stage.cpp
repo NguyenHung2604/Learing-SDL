@@ -4,14 +4,274 @@
 #include <algorithm>
 #include "util.hpp"
 
+bool hasWon = false;
 int enemyremainingTime;
 int stageResetTimer;
 int backgroundX;
 int highscore = 0;
 int timeout = 300; // thoi gian xuat hien cai title
 int reveal = 0; // thoi gian chay de xuat hien cai title
+int bossSpawnScore = BOSS_SPAWN_SCORE;
+bool bossActive = false; // danh dau boss co hoat dong hay khong
+ // Đánh dấu đang phát nhạc nào
 TextureManager *texManager = nullptr;
 Star stars[MAX_STARS];
+
+
+void bossFireBullet(Boss *e)
+{
+    if(e->CurrentPhase == BOSS_PHASE_1)
+    {
+        if(player == nullptr) return;
+        Entity *bullet = new Entity;
+        memset(bullet, 0, sizeof(Entity));
+        // thêm viên đạn vào cuối linked list
+        stage.bullettail->next = bullet;
+        stage.bullettail = bullet;
+
+        bullet->x = e->entity.x;
+        bullet->y = e->entity.y;
+        bullet->health = 1;
+        bullet->texture = bossbullet;
+        bullet->side = SIDE_ENEMY;
+        SDL_QueryTexture(bullet->texture, NULL, NULL, &bullet->w, &bullet->h);
+
+        bullet->x += (e->entity.w / 2) - (bullet->w / 2);
+        bullet->y += (e->entity.h / 2) - (bullet->h / 2);
+        velocityVector(player->x + (player->w / 2), player->y + (player->h / 2), e->entity.x, e->entity.y, &bullet->dx, &bullet->dy);
+
+        bullet->dx *= ENEMY_BULLET_SPEED;
+        bullet->dy *= ENEMY_BULLET_SPEED;
+
+        // Khi tạo enemy, đặt reload time
+        e->entity.reload = FPS*(1 + (rand() % 3)); 
+        }
+    else if(e->CurrentPhase == BOSS_PHASE_2)
+{
+    if(player == nullptr) return;
+        if(e->attacktype == BOSS_ATTACK_SPREAD){
+        // Bắn đạn spread (3 viên đạn cùng lúc)
+        for(int i = -1; i <= 1; i++)
+        {
+            Entity *bullet = new Entity;
+            memset(bullet, 0, sizeof(Entity));
+            stage.bullettail->next = bullet;
+            stage.bullettail = bullet;
+
+            bullet->x = e->entity.x;
+            bullet->y = e->entity.y;
+            bullet->health = 1;
+            bullet->texture = bossbullet;
+            bullet->side = SIDE_ENEMY;
+            SDL_QueryTexture(bullet->texture, NULL, NULL, &bullet->w, &bullet->h);
+
+            bullet->x += (e->entity.w / 2) - (bullet->w / 2);
+            bullet->y += (e->entity.h / 2) - (bullet->h / 2);
+            
+            // Tính vector vận tốc hướng về player
+            float dx, dy;
+            velocityVector(player->x + (player->w / 2), player->y + (player->h / 2), 
+                        bullet->x, bullet->y, &dx, &dy);
+            
+            // Điều chỉnh góc bắn tạo hiệu ứng spread
+            float angle = atan2(dy, dx);
+            angle += i * 0.3; // Điều chỉnh góc bắn (khoảng 17 độ mỗi viên)
+            
+            bullet->dx = cos(angle) * ENEMY_BULLET_SPEED * 1.5; // Tăng tốc đạn 50%
+            bullet->dy = sin(angle) * ENEMY_BULLET_SPEED * 1.5;
+        }
+        
+        // Thời gian nạp đạn nhanh hơn Phase 1
+        e->entity.reload = FPS*(2 + (rand() % 3)); // 0.3-0.5 giây
+        
+        // Đôi khi thêm một đợt đạn đặc biệt
+        if (rand() % 2 == 0) { // 20% cơ hội
+            // Chờ một chút trước khi bắn đợt đặc biệt
+            SDL_Delay(100);
+            
+            // Bắn một viên đạn lớn, mạnh hơn
+            Entity *bigBullet = new Entity;
+            memset(bigBullet, 0, sizeof(Entity));
+            stage.bullettail->next = bigBullet;
+            stage.bullettail = bigBullet;
+            
+            bigBullet->x = e->entity.x;
+            bigBullet->y = e->entity.y + (rand() % e->entity.h); // Vị trí ngẫu nhiên
+            bigBullet->health = 2; // Cần 2 hit để phá
+            bigBullet->texture = enemybulletTexture;
+            bigBullet->side = SIDE_ENEMY;
+            bigBullet->w *= 4;
+            bigBullet->h *= 4;
+            SDL_QueryTexture(bigBullet->texture, NULL, NULL, &bigBullet->w, &bigBullet->h);
+            
+            // Làm cho viên đạn to hơn
+            
+            // Nhắm thẳng vào player với tốc độ cao
+            velocityVector(player->x + (player->w / 2), player->y + (player->h / 2),
+                        bigBullet->x, bigBullet->y, &bigBullet->dx, &bigBullet->dy);
+            bigBullet->dx *= ENEMY_BULLET_SPEED * 1.5;
+            bigBullet->dy *= ENEMY_BULLET_SPEED * 1.5;
+        }
+    }
+    else if(e->attacktype == BOSS_ATTACK_LASER)
+    {   
+        if(player == nullptr) return;
+        if(e->attackcooldown == FPS/2)
+        {
+            e->lasertargetY = player->y + (player->w/2);
+        }
+        if(e->attackcooldown > 0)
+        {
+            return;
+        }
+
+        playsound(SND_ALIEN_FIRE, CH_ALIEN_FIRE);
+        // ban laser
+        for(int i = 0; i < 15; i++)
+        {
+            Entity *laserpart = new Entity;
+            memset(laserpart, 0, sizeof(Entity));
+            stage.bullettail->next = laserpart;
+            stage.bullettail = laserpart;
+
+            laserpart->x = e->entity.x - 40*i;
+            laserpart->y = e->lasertargetY - 15;
+            laserpart->health = 1;
+            laserpart->texture = enemybulletTexture;
+            laserpart->side = SIDE_ENEMY;
+            SDL_QueryTexture(laserpart->texture, NULL, NULL, &laserpart->w, &laserpart->h);
+
+            laserpart->w *= 4;
+            laserpart->h  = 30;
+
+            laserpart->dx = -25;
+            laserpart->dy = 0;
+
+        }
+        e->attackcooldown = FPS*3;
+    }
+}
+}
+
+void doBoss(){
+    Boss *b, *prev;
+    
+    prev = &stage.bosshead;
+    
+    for (b = stage.bosshead.next; b != nullptr; b = b->next) {
+        // Di chuyển boss
+        b->entity.x += b->entity.dx;
+        b->entity.y += b->entity.dy;
+
+        if (b->invincibleFrames > 0) {
+            b->invincibleFrames--;
+        }
+       
+        if (b->CurrentPhase == BOSS_PHASE_2) {
+            // Di chuyển theo hình sin để khó đoán hơn
+            if (b->entity.dx == 0) {
+                b->entity.dy = 3 * sin(SDL_GetTicks() / 500.0); // Di chuyển theo hình sin
+            }
+            
+            
+            // if (rand() % 180 == 0) { // Khoảng mỗi 3 giây với FPS=60
+            //     b->entity.y = 50 + rand() % (SCREEN_HEIGHT - b->entity.h - 50);
+            //     // Tạo hiệu ứng teleport
+            //     addExplosion(b->entity.x + b->entity.w/2, b->entity.y + b->entity.h/2, 3);
+            // }
+
+            // if (rand() % 20 == 0) { // 5% cơ hội né đạn mỗi frame
+            //      b->entity.y = rand() % (SCREEN_HEIGHT - b->entity.h - 100) + 50;
+            // }
+
+            // chuyen doi hai kieu tan cong
+            if(rand() % 180 == 0) 
+            {
+                if(b->attacktype == BOSS_ATTACK_SPREAD)
+                {
+                    b->attacktype = BOSS_ATTACK_LASER;
+                    b->lasertime = FPS*2;
+                    b->attackcooldown = FPS/2;
+                    b->laserwarningtime = 30;
+                    // Cập nhật vị trí mục tiêu ngay tại đây khi chuyển sang mode laser
+                    if(player != nullptr) {
+                     b->lasertargetY = player->y + (player->h/2);
+                    }
+                }
+                else{
+                    b->attacktype = BOSS_ATTACK_SPREAD;
+                }
+            }   
+
+                if(b->attacktype == BOSS_ATTACK_LASER)
+            {
+                if(b->lasertime > 0)
+                {
+                    b->lasertime--;
+                }
+            }    
+        }
+        else{
+        // Logic di chuyển lên xuống
+        if (b->entity.y <= 50 || b->entity.y >= SCREEN_HEIGHT - b->entity.h - 50) {
+            b->entity.dy *= -1;
+        }
+        
+        // Logic khi boss mới xuất hiện
+        if (b->entity.x > SCREEN_WIDTH - b->entity.w - 100) {
+            // Tiếp tục di chuyển từ phải sang, vi b->entity.dx = -1;
+            b->entity.x = std::fmax(b->entity.x, SCREEN_WIDTH/2);
+        } 
+        else {
+            // Khi đến vị trí, chỉ di chuyển lên xuống
+            b->entity.dx = 0;
+            if (b->entity.dy == 0) {
+                b->entity.dy = 2;
+            }
+        }
+    }
+        
+
+        // Boss tấn công
+        if (--b->attackcooldown <= 0) {
+            bossFireBullet(b);
+            b->attackcooldown = FPS/(1 + (rand() % 2));
+        }
+        
+        // Xử lý chuyển phase
+        if (b->entity.health <= b->phaseChangeHealth && b->CurrentPhase == BOSS_PHASE_1) {
+            b->CurrentPhase = BOSS_PHASE_2;
+            b->attacktype = BOSS_ATTACK_SPREAD;
+            // addExplosion(b->entity.x + b->entity.w/2, b->entity.y + b->entity.h/2, 5);
+        }
+    
+        // Xử lý khi boss bị tiêu diệt
+        if (b->entity.health <= 0) {
+            addExplosion(b->entity.x + b->entity.w/2, b->entity.y + b->entity.h/2, 20);
+            playmusic(SND_ALIEN_DIE);
+            switchMusic(false);
+            stage.score += 200;
+            hasWon = true;
+            
+            if (b == stage.bosstail) {
+                stage.bosstail = prev;
+            }
+            
+            prev->next = b->next;
+            delete b;
+            b = prev;
+            bossActive = false;
+            
+            // Thêm dòng này để chuyển sang màn hình highscore sau khi giết boss
+            currentGameState = SCORE_SCREEN;
+            
+            // Lưu điểm trước khi chuyển màn hình
+            addHighscore(stage.score);
+            initHighscore();
+        }
+    }
+}
+
 
 
 void doPlayer()
@@ -341,7 +601,9 @@ void logic()
             // SDL_LOG(("Chuyển từ SCORE_SCREEN sang GAME_PLAYING");
             currentGameState = GAME_PLAYING;
             resetStage();
-            enemyremainingTime = 1;
+            enemyremainingTime = 1;  // Đặt thời gian spawn enemy ngắn để enemies xuất hiện ngay
+            bossSpawnScore = BOSS_SPAWN_SCORE;  // Reset điểm spawn boss
+            bossActive = false;  // Đảm bảo boss không active khi bắt đầu game mới
             return;
         }
         else if (currentGameState == GAME_OVER)
@@ -381,9 +643,26 @@ void logic()
             doPlayer();
         }
         
-        spawnEnemy();
+            // Kiểm tra điều kiện spawn boss
+        if (!bossActive && stage.score >= bossSpawnScore) {
+            initBoss();
+            
+            
+        }
+        
+        // Gọi doBoss nếu đang active
+        if (bossActive) {
+            doBoss();
+        } else {
+            spawnEnemy();
+        }
+
+        
         doEnemies();
         doBullet();
+        if (bossActive) {
+        bulletHitBoss();
+    }
         doExplosion();
         doDebris();
     }
@@ -439,7 +718,8 @@ void resetStage()
     SDL_Texture* enemyBulletTex = enemybulletTexture;
     SDL_Texture* bg = background;
     SDL_Texture* explosionTex = explosionTexture;
-
+    SDL_Texture* bosstex = bossTexture;
+    SDL_Texture* bulletboss = bossbullet;
     stage.score = 0;
     
     // Giải phóng các đối tượng
@@ -471,6 +751,12 @@ void resetStage()
         delete d;
     }
 
+    while (stage.bosshead.next)
+    {
+        Boss* b = stage.bosshead.next;
+        stage.bosshead.next = b->next;
+        delete b;
+    }
     // Reset cấu trúc stage
     memset(&stage, 0, sizeof(Stage));
     
@@ -481,13 +767,19 @@ void resetStage()
     enemybulletTexture = enemyBulletTex;
     background = bg;
     explosionTexture = explosionTex;
+    bossTexture = bosstex;
+    bossbullet = bulletboss;
 
     // Khởi tạo lại các đầu danh sách
     stage.fightertail = &stage.fighterhead;
     stage.bullettail = &stage.bullethead;
     stage.explosiontail = &stage.explosionhead;
     stage.debristail = &stage.debrishead;
+    stage.bosstail = &stage.bosshead;
     
+
+    bossActive = false;
+    stage.score = 0;
     // Khởi tạo lại người chơi và các thành phần khác
     initPlayer();
     if (!player)
@@ -496,7 +788,7 @@ void resetStage()
         exit(1);
     }
     initStarField();
-
+    
     enemyremainingTime = 0;
     stageResetTimer = 3 * FPS;
 }
@@ -523,11 +815,13 @@ void initStage()
     stage.bullettail = &stage.bullethead;
     stage.explosiontail = &stage.explosionhead;
     stage.debristail = &stage.debrishead;
-
+    stage.bosstail = &stage.bosshead;
     // Khởi tạo các texture trước khi gọi initPlayer
     if (!texManager) {
         texManager = new TextureManager(app.renderer);
     }
+    bossbullet = texManager->loadTexture("Graphic/bossbul.png");
+    bossTexture = texManager->loadTexture("Graphic/bosss.png");
     playerTexture = texManager->loadTexture("Graphic/ship2new.png");
     bulletTexture = texManager->loadTexture("Graphic/dan1.png");
     enemyTexture = texManager->loadTexture("Graphic/enemynew.png");
@@ -538,6 +832,36 @@ void initStage()
 
     // Đặt lại stage
     resetStage();
+}
+
+void initBoss(){
+    Boss *boss = new Boss;
+    memset(boss, 0, sizeof(Boss));
+
+    // thiet lap thuoc tinh
+    switchMusic(true);
+    boss->entity.side = SIDE_ENEMY;
+    boss->entity.health = BOSS_HEALTH;
+    boss->entity.x = SCREEN_WIDTH;
+    boss->entity.y = SCREEN_HEIGHT/2 - 100;
+    boss->entity.dx = -1; // di chuyen cham lai
+    boss->lasertargetY = SCREEN_HEIGHT/2;
+    boss->entity.texture = bossTexture;
+    SDL_QueryTexture(boss->entity.texture, NULL, NULL, &boss->entity.w, &boss->entity.h);
+
+    // thiet lap thuoc tinh dac biet cua boss
+   
+    boss->CurrentPhase = BOSS_PHASE_1;
+    boss->phaseChangeHealth = 100; // se chuyen sang trang thai khac khi mau xuong 300
+    boss->attacktype = BOSS_ATTACK_NORMAL;
+    boss->attackcooldown = FPS;
+
+    // Them boss vao danh sach
+    stage.bosstail->next = boss;
+    stage.bosstail = boss;
+    player->health = std::min(PLAYER_HEALTH, player->health + 30);
+
+    bossActive = true;
 }
 
 void fireBullet()
@@ -576,6 +900,7 @@ int bulletHitFighter(Entity *b)
                 if(e == player)
                 {
                     playsound(SND_PLAYER_DIE, CH_PLAYER);
+                    switchMusic(false);
                 }
                 else{
                     playsound(SND_ALIEN_DIE, CH_ANY);
@@ -593,6 +918,50 @@ int bulletHitFighter(Entity *b)
         }
     }
     return 0;
+}
+
+void bulletHitBoss()
+{
+    if (!bossActive) return;
+    
+    Entity *b;
+    Boss *boss;
+    
+    for (b = stage.bullethead.next; b != nullptr; b = b->next)
+    {
+        // Chỉ xét đạn của người chơi
+        if (b->side == SIDE_PLAYER && b->health > 0) // Kiểm tra đạn còn sống
+        {
+            for (boss = stage.bosshead.next; boss != nullptr; boss = boss->next)
+            {
+                if (collision(b->x, b->y, b->w, b->h, boss->entity.x, boss->entity.y, boss->entity.w, boss->entity.h))
+                {   
+                    // Đánh dấu đạn đã trúng mục tiêu
+                    b->health = 0;
+                    
+                    // Tạo hiệu ứng nổ, vo vun
+                    addDebris(b);
+                    
+                    // Phát âm thanh
+                    playsound(SND_ALIEN_DIE, CH_ANY);
+                    
+                    // Boss chỉ mất máu nếu không trong trạng thái miễn nhiễm
+                    if (boss->invincibleFrames <= 0) {
+                        // Có 33% cơ hội gây 2 sát thương, 67% gây 1 sát thương
+                        if(rand() % 3 == 0) {
+                            boss->entity.health -= 2;
+                        } else {
+                            boss->entity.health--;
+                        }
+                        
+                        // Đặt thời gian miễn nhiễm
+                        boss->invincibleFrames = 10;
+                    }
+                    break;
+                }
+            }
+        }
+    }
 }
 
 void enemyFireBullet(Entity *e) // bắn một viên đạn từ enemy
@@ -679,6 +1048,47 @@ void drawLogo()
     blitRect(UET, &r, (SCREEN_WIDTH/2) - (r.h) - 10, 250);
 }
 
+void drawBoss() {
+    Boss* b;
+    for (b = stage.bosshead.next; b != nullptr; b = b->next) {
+        blit(b->entity.texture, b->entity.x, b->entity.y);
+        
+        // Vẽ thanh máu cho boss
+        SDL_SetRenderDrawColor(app.renderer, 255, 0, 0, 255);
+        SDL_Rect healthBar = {
+            (int)b->entity.x, 
+            (int)b->entity.y - 10, 
+            (int)(b->entity.w * b->entity.health / BOSS_HEALTH), 
+            5
+        };
+        SDL_RenderFillRect(app.renderer, &healthBar);
+
+        // Vẽ đường laser cảnh báo
+        if(b->attacktype == BOSS_ATTACK_LASER && b->attackcooldown > 0 && b->laserwarningtime > 0)
+        {
+            // Vẽ đường nhắm laser đậm hơn
+            b->laserwarningtime --;
+            SDL_SetRenderDrawBlendMode(app.renderer, SDL_BLENDMODE_ADD);
+            SDL_SetRenderDrawColor(app.renderer, 255, 0, 255, 200);
+            
+            // Vẽ nhiều đường để tạo hiệu ứng đậm hơn
+            for(int i = -5; i <= 5; i++) {
+                SDL_RenderDrawLine(app.renderer, 
+                    b->entity.x + b->entity.w/2, 
+                    b->lasertargetY + i, 
+                    0, 
+                    b->lasertargetY  + i);
+            }
+            
+            // Thêm text cảnh báo khi đếm ngược
+            if(b->attackcooldown % 20 < 12) {
+                drawText(1000, 35, 255, 0 , 0, "FAIL EXAM LASER");
+            }
+            
+            SDL_SetRenderDrawBlendMode(app.renderer, SDL_BLENDMODE_NONE);
+        }
+    }
+}
 void draw()
 {
     drawBackground();
@@ -697,7 +1107,14 @@ void draw()
         // drawText(SCREEN_WIDTH / 2 - 150, SCREEN_HEIGHT / 2 - 30, 255, 255, 255, "GAME TITLE");
         // drawText(SCREEN_WIDTH / 2 - 180, SCREEN_HEIGHT / 2 + 30, 255, 255, 255, "PRESS ENTER TO START");
         drawHighscore();
-        drawText(450, 600, 255, 255, 255, "PRESS ENTER TO PLAY!");
+        if(hasWon)
+        {
+            drawText(570, 580, 255, 255, 0, "YOU WIN!");
+            drawText(420, 600, 255, 255, 255, "PRESS ENTER TO PLAY AGAIN");
+        }
+        else{
+        drawText(450, 600, 255, 255, 255, "PRESS ENTER TO PLAY");
+        }
     }
     else if (currentGameState == GAME_PLAYING)
     {
@@ -706,6 +1123,10 @@ void draw()
         drawHud();
         drawFighter();
         drawBullet();
+        if(bossActive)
+        {
+            drawBoss();
+        }
         drawDebris();
         drawExplosions();
     }
@@ -814,7 +1235,36 @@ void drawBullet()
     Entity *b;
     for (b = stage.bullethead.next; b != nullptr; b = b->next)
     {
-        blit(b->texture, b->x , b->y - b->h/2);
+        // Trong drawBullet() cải thiện cách hiển thị laser:
+        if (b->h > 25 && b->side == SIDE_ENEMY) {
+            // Đây là laser - vẽ với hiệu ứng đặc biệt
+            SDL_SetRenderDrawBlendMode(app.renderer, SDL_BLENDMODE_ADD);
+            SDL_SetTextureColorMod(b->texture, 255, 20, 60); // Màu đỏ rực cho laser
+            
+            // Vẽ laser to hơn
+            SDL_Rect dest;
+            dest.x = b->x;
+            dest.y = b->y - b->h/4; // Đặt vị trí y chính xác
+            dest.w = b->w;
+            dest.h = b->h;
+            SDL_RenderCopy(app.renderer, b->texture, NULL, &dest);
+            
+            // Vẽ thêm viền sáng
+            SDL_SetRenderDrawColor(app.renderer, 255, 0, 0, 150);
+            SDL_Rect laserRect = {(int)b->x, (int)b->y - b->h/4, b->w, b->h};
+            SDL_RenderDrawRect(app.renderer, &laserRect);
+            
+            // Thêm hiệu ứng nổ nhỏ để laser dễ thấy hơn
+            // if (rand() % 3 == 0) {
+            //     addExplosion(b->x, b->y, 1);
+            // }
+            
+            SDL_SetRenderDrawBlendMode(app.renderer, SDL_BLENDMODE_NONE);
+            SDL_SetTextureColorMod(b->texture, 255, 255, 255);
+        } else {
+            // Vẽ bình thường cho đạn thường
+            blit(b->texture, b->x, b->y);
+        }
     }
 }
 

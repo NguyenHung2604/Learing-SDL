@@ -10,7 +10,7 @@ const int RELOAD_SPEED = 6;
 const int SIDE_PLAYER = 0;
 const int SIDE_ENEMY = 1;
 const int ENEMY_HEALTH = 2;
-const int PLAYER_HEALTH = 10;
+const int PLAYER_HEALTH = 50;
 const int FPS = 60;
 const int ENEMY_BULLET_SPEED = 8;
 const int MAX_STARS = 500;
@@ -22,7 +22,8 @@ const int GLYPH_WIDTH = 16;
 const int GLYPH_HEIGHT = 16;
 const int GLYPHS_PER_ROW = 20;
 const int NUM_HIGHSCORES = 8;
-
+const int BOSS_SPAWN_SCORE = 10;
+const int BOSS_HEALTH = 150;
 enum  
 {
     CH_ANY = -1,
